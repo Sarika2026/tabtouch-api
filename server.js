@@ -7,10 +7,6 @@ app.use(cors()); // <-- ADD THIS
 app.use(express.json());
 
 
-
-const app = express();
-app.use(express.json());
-
 app.post("/api/tabtouch", async (req,res) => {
   const {username, password, url} = req.body;
   if(!username || !password || !url) return res.json({ok:false, error:"Missing fields"});
