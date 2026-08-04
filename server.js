@@ -5,47 +5,36 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => res.send("Tabtouch API is running"));
+app.get("/", (req, res) => res.send("Racing.com API is running"));
 
 app.post("/api/tabtouch", async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ ok: false, error: "Missing url" });
 
   try {
-    // 1. Parse URL: https://www.tabtouch.com.au/racing/2026-08-05/orb/6
+    // Convert Tabtouch URL to Racing.com URL
+    // Tabtouch: https://www.tabtouch.com.au/racing/2026-08-05/orb/6
+    // Racing: https://api.racing.com/v1/en-au/meetings/2026-08-05/orb/races/6
     const parts = url.split("/");
-    const date = parts[4]; // 2026-08-05
-    const venueCode = parts[5]; // orb
-    const raceNum = parts[6]; // 6
+    const date = parts[4];
+    const venueCode = parts[5];
+    const raceNum = parts[6];
 
-    // 2. Call the Tabtouch racecard API - this is public
-    const apiUrl = `https://api.tabtouch.com.au/v1/racing/racecard?date=${date}`;
+    const apiUrl = `https://api.racing.com/v1/en-au/meetings/${date}/${venueCode}/races/${raceNum}`;
     
     const r = await fetch(apiUrl, {
-      headers: { 
-        'User-Agent': 'Mozilla/5.0',
-        'Accept': 'application/json',
-        'Referer': 'https://www.tabtouch.com.au/'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
     });
 
-    if (!r.ok) throw new Error("Tabtouch API returned " + r.status);
+    if (!r.ok) throw new Error("Racing.com API returned " + r.status);
     const data = await r.json();
 
-    // 3. Find the right meeting + race
-    const meeting = data.meetings.find(m => m.venueCode.toLowerCase() === venueCode.toLowerCase());
-    if(!meeting) throw new Error("Meeting not found: " + venueCode);
-
-    const race = meeting.races.find(ra => ra.raceNumber == raceNum);
-    if(!race) throw new Error("Race " + raceNum + " not found");
-
-    // 4. Map to J,K,L,M,N
-    const horses = race.runners.map(runner => ({
-      J: runner.runnerNumber || "-", 
-      K: runner.runnerName || "-", 
-      L: runner.jockeyName || "-", 
+    const horses = data.race.runners.map(runner => ({
+      J: runner.number || "-", 
+      K: runner.name || "-", 
+      L: runner.jockey?.fullName || "-", 
       N: runner.barrierNumber || "-", 
-      M: runner.winOdds || "-" 
+      M: runner.fixedOdds?.win || "-" 
     }));
 
     res.json({ ok: true, horses });
