@@ -3,47 +3,47 @@ import cors from "cors";
 import puppeteer from "puppeteer";
 
 const app = express();
-app.use(cors()); // <-- ADD THIS
+app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => res.send("Tabtouch API is running"));
 
-app.post("/api/tabtouch", async (req,res) => {
-  const {username, password, url} = req.body;
-  if(!username || !password || !url) return res.json({ok:false, error:"Missing fields"});
+app.post("/api/tabtouch", async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ ok: false, error: "Missing url" });
 
-  const browser = await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox']});
-  const page = await browser.newPage();
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
 
-  try{
-    await page.goto("https://www.tabtouch.com.au/login", {waitUntil: 'networkidle2', timeout: 60000});
-    await page.type('input[name="username"]', username);
-    await page.type('input[name="password"]', password);
-    await page.click('button[type="submit"]');
-    await page.waitForNavigation({waitUntil: 'networkidle2', timeout: 60000});
-
-    await page.goto(url, {waitUntil: 'networkidle2', timeout: 60000});
+    // Wait for race data to load
+    await page.waitForSelector('[data-testid="runner-card"]', { timeout: 15000 });
 
     const horses = await page.evaluate(() => {
-      let data = [];
-      document.querySelectorAll(".runner-card").forEach(row => {
-        data.push({
-          J: row.querySelector(".runner-card__number")?.innerText.trim(),
-          K: row.querySelector(".runner-card__name")?.innerText.trim(),
-          L: row.querySelector(".runner-card__jockey")?.innerText.trim(),
-          M: row.querySelector(".runner-card__price")?.innerText.trim(),
-          N: row.querySelector(".runner-card__barrier")?.innerText.trim(),
-        })
-      })
-      return data;
+      const cards = Array.from(document.querySelectorAll('[data-testid="runner-card"]'));
+      return cards.map(card => {
+        return {
+          J: card.querySelector('.runner-number')?.innerText || "-", // Number
+          K: card.querySelector('.runner-name')?.innerText || "-",   // Horse
+          L: card.querySelector('.runner-jockey')?.innerText || "-", // Jockey
+          N: card.querySelector('.runner-barrier')?.innerText || "-", // Barrier
+          M: "-" // Odds - hidden without login
+        };
+      });
     });
 
-    await browser.close();
-    res.json({ok: true, race: url, horses});
-  }catch(e){
-    await browser.close();
-    res.json({ok: false, error: e.message});
+    res.json({ ok: true, horses });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  } finally {
+    if (browser) await browser.close();
   }
 });
 
-app.get("/", (req,res) => res.send("Tabtouch API is running"));
-app.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("API running on " + PORT));
