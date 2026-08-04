@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import puppeteer from "puppeteer";
 
+
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -16,8 +18,11 @@ app.post("/api/tabtouch", async (req, res) => {
   try {
     browser = await puppeteer.launch({
       headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+      args: 
     });
+
+    
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
     await page.waitForSelector('[data-testid="runner-card"]', { timeout: 15000 });
