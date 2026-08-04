@@ -12,13 +12,12 @@ app.post("/api/tabtouch", async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ ok: false, error: "Missing url" });
 
-
-browser = await puppeteer.launch({
-  headless: "new",
-  args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  // DELETE the executablePath line completely
-});
-    
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
 
