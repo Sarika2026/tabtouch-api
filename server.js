@@ -1,49 +1,27 @@
-import express from "express";
-import cors from "cors";
-import puppeteer from "puppeteer";
+function runLogic(){
+  if(raceData.length === 0){ alert("Fetch race first"); return; }
+  
+  // Example Logic: Score = 10 - Barrier. Lower barrier = better
+  raceData.forEach(h => {
+    let barrier = parseInt(h.N) || 20; // if no barrier, give 20
+    h.Score = 10 - barrier; 
+    
+    // Bonus if jockey name has "Williams"
+    if(h.L.toLowerCase().includes("williams")) h.Score += 3;
+  });
+  
+  // Sort by highest score
+  raceData.sort((a,b) => b.Score - a.Score);
+  
+  // Re-draw table with Score column
+  showTable();
+}
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-app.get("/", (req, res) => res.send("Tabtouch API is running"));
-
-app.post("/api/tabtouch", async (req, res) => {
-  const { url } = req.body;
-  if (!url) return res.status(400).json({ ok: false, error: "Missing url" });
-
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    });
-    const page = await browser.newPage();
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
-
-    // Wait for race data to load
-    await page.waitForSelector('[data-testid="runner-card"]', { timeout: 15000 });
-
-    const horses = await page.evaluate(() => {
-      const cards = Array.from(document.querySelectorAll('[data-testid="runner-card"]'));
-      return cards.map(card => {
-        return {
-          J: card.querySelector('.runner-number')?.innerText || "-", // Number
-          K: card.querySelector('.runner-name')?.innerText || "-",   // Horse
-          L: card.querySelector('.runner-jockey')?.innerText || "-", // Jockey
-          N: card.querySelector('.runner-barrier')?.innerText || "-", // Barrier
-          M: "-" // Odds - hidden without login
-        };
-      });
-    });
-
-    res.json({ ok: true, horses });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  } finally {
-    if (browser) await browser.close();
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("API running on " + PORT));
+function showTable(){
+  let table = `<table><tr><th>Rank</th><th>No</th><th>Horse</th><th>Jockey</th><th>Barrier</th><th>Score</th></tr>`;
+  raceData.forEach((h,i) => {
+    table += `<tr><td>${i+1}</td><td>${h.J}</td><td>${h.K}</td><td>${h.L}</td><td>${h.N}</td><td><b>${h.Score}</b></td></tr>`;
+  });
+  table += `</table>`;
+  document.getElementById('results').innerHTML = table;
+}
