@@ -1,8 +1,10 @@
+
 {
   "name": "tabtouch-api",
   "type": "module",
   "dependencies": {
     "express": "^4.19.2",
-    "puppeteer": "^22.12.0"
+    "puppeteer": "^22.12.0",
+    "cors": "^2.8.5"
   }
 }
