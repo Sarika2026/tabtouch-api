@@ -1,6 +1,9 @@
 import express from "express";
 import puppeteer from "puppeteer";
 
+import cors from "cors";
+app.use(cors());
+
 const app = express();
 app.use(express.json());
 
