@@ -13,10 +13,12 @@ app.post("/api/tabtouch", async (req, res) => {
 
   try {
     // 1. Fetch the race page HTML
-    const r = await fetch(url, {
+    const r = await fetch("https://tabtouch-proxy.onrender.com/api/tabtouch", {
       headers: { 'User-Agent': 'Mozilla/5.0 Chrome/120' }
     });
     const html = await r.text();
+
+   
 
     // 2. Find the JSON data inside __NEXT_DATA__
     const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/);
