@@ -5,14 +5,12 @@ import fs from "fs";
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 const PORT = process.env.PORT || 3000;
 const CACHE_FILE = "/tmp/oldhorses.json";
 
 let oldHorseCache = {};
 if(fs.existsSync(CACHE_FILE)) {
     try{ oldHorseCache = JSON.parse(fs.readFileSync(CACHE_FILE, "utf8")); }catch(e){}
-}
 const saveCache = () => { try{ fs.writeFileSync(CACHE_FILE, JSON.stringify(oldHorseCache)); }catch(e){} };
 
 function processRace(data, raceId) {
@@ -52,17 +50,14 @@ app.post("/api/tabtouch", async (req, res) => {
         const { url } = req.body;
         const parts = url.split("/");
         const date = parts[4]; const track = parts[5]; const race = parts[6];
-
         let apiUrl = `https://www.tabtouch.com.au/api/racing/v1/race/${date}/${track}/${race}`;
         let r = await fetch(apiUrl, {headers:{"User-Agent":"Mozilla/5.0"}});
-
         if(!r.ok){
             apiUrl = `https://www.tabtouch.com.au/api/racing/v2/race/${date}/${track}/${race}`;
             r = await fetch(apiUrl, {headers:{"User-Agent":"Mozilla/5.0"}});
         }
         const tabData = await r.json();
         console.log("TABTOUCH RAW:", JSON.stringify(tabData).substring(0,500));
-
         let runners = [];
         if(tabData.runners){
             runners = tabData.runners.map(r => ({number:r.number,name:r.name,odds:parseFloat(r.fixedOddsWin)||parseFloat(r.toteWin)||0,jockey:r.jockey?.name || r.jockey,barrier:r.barrier}));
@@ -90,22 +85,7 @@ app.post("/api/sheet1", async (req, res) => {
 
 app.get("/page", (req, res) => {
     const url = req.query.url || "";
-    res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sheet1</title>
-    <style>body{font-family:Arial;margin:5px;background:#eee;font-size:12px}#btn{width:100%;padding:10px;background:#007bff;color:#fff;border:0;border-radius:4px;font-size:16px}table{width:100%;border-collapse:collapse;background:#fff;margin-top:5px}td,th{border:1px solid #ddd;padding:3px;text-align:center;white-space:nowrap}.header{background:#fff;padding:5px;border-radius:4px;margin:5px 0}.colA{width:30px;font-weight:bold}.colD{text-align:left;padding-left:5px}</style></head><body>
-    <button id="btn" onclick="load()">🔄 Refresh</button><div id="head" class="header"></div><div id="tbl">Loading...</div>
-    <script>
-    const API="/api/sheet1"; const RACE_URL="${url}";
-    async function load(){document.getElementById("btn").disabled=true;document.getElementById("tbl").innerHTML="Loading...";
-    try{let r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:RACE_URL})});let d=await r.json();
-    if(!d.ok) throw new Error(d.error);
-    document.getElementById("head").innerHTML='<b>Q5:</b>'+d.Q5+' <b>Q4:</b>'+d.Q4+' <b>Q20:</b><span style="background:'+getC(d.Q20Color)+';padding:2px">'+d.Q20+'</span>';
-    let h="<table><tr><th class=colA>A</th><th>D</th><th>J</th><th>K</th><th>H</th><th>N</th><th>P%</th></tr>";
-    d.rows.forEach((x)=>{let bg=getC(x.color);h+='<tr style="background:'+bg+'"><td class=colA>'+x.A+'</td><td class=colD>'+x.D+'</td><td>'+x.J+'</td><td>'+x.K+'</td><td>'+x.H+'</td><td>'+x.N+'</td><td>'+x.P+'%</td></tr>'});
-    document.getElementById("tbl").innerHTML=h+"</table>";}catch(e){document.getElementById("tbl").innerHTML="<div style=color:red>"+e+"</div>"}
-    document.getElementById("btn").disabled=false;}
-    function getC(i){return {4:"#0f0",35:"#92D050",38:"#FFC000",39:"#f00",46:"#FF9966",26:"#FFD700",0:"#fff"}[i]||"#fff"}
-    load(); setInterval(load,30000);
-    </script></body></html>`);
+    res.send('<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sheet1</title><style>body{font-family:Arial;margin:5px;background:#eee;font-size:12px}#btn{width:100%;padding:10px;background:#007bff;color:#fff;border:0;border-radius:4px;font-size:16px}table{width:100%;border-collapse:collapse;background:#fff;margin-top:5px}td,th{border:1px solid #ddd;padding:3px;text-align:center;white-space:nowrap}.header{background:#fff;padding:5px;border-radius:4px;margin:5px 0}.colA{width:30px;font-weight:bold}.colD{text-align:left;padding-left:5px}</style></head><body><button id="btn" onclick="load()">🔄 Refresh</button><div id="head" class="header"></div><div id="tbl">Loading...</div><script>const API="/api/sheet1"; const RACE_URL="'+url+'";async function load(){document.getElementById("btn").disabled=true;document.getElementById("tbl").innerHTML="Loading...";try{let r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:RACE_URL})});let d=await r.json();if(!d.ok) throw new Error(d.error);document.getElementById("head").innerHTML="<b>Q5:</b>"+d.Q5+" <b>Q4:</b>"+d.Q4+" <b>Q20:</b><span style=background:"+getC(d.Q20Color)+";padding:2px>"+d.Q20+"</span>";let h="<table><tr><th class=colA>A</th><th>D</th><th>J</th><th>K</th><th>H</th><th>N</th><th>P%</th></tr>";d.rows.forEach((x)=>{let bg=getC(x.color);h+="<tr style=background:"+bg+"><td class=colA>"+x.A+"</td><td class=colD>"+x.D+"</td><td>"+x.J+"</td><td>"+x.K+"</td><td>"+x.H+"</td><td>"+x.N+"</td><td>"+x.P+"%</td></tr>"});document.getElementById("tbl").innerHTML=h+"</table>";}catch(e){document.getElementById("tbl").innerHTML="<div style=color:red>"+e+"</div>"}document.getElementById("btn").disabled=false;}function getC(i){return {4:"#0f0",35:"#92D050",38:"#FFC000",39:"#f00",46:"#FF9966",26:"#FFD700",0:"#fff"}[i]||"#fff"}load(); setInterval(load,30000);</script></body></html>');
 });
 
 app.listen(PORT, ()=>console.log(`Running on ${PORT}`));
