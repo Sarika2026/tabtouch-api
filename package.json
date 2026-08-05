@@ -1,1 +1,2 @@
 {"name":"sheet1-api","type":"module","dependencies":{"express":"^4.18.2","cors":"^2.8.5"}}
+{"name":"tabtouch-proxy","type":"module","dependencies":{"express":"^4.18.2","cors":"^2.8.2"}}
