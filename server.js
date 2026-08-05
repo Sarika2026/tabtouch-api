@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import fs from "fs";
 
-const app = express(); // <- THIS WAS MISSING
+const app = express();
 app.use(cors());
 app.use(express.json());
 
@@ -40,23 +40,22 @@ function processRace(data, raceId) {
         return { A, D, J: h.number, K, L: h.jockey, N: h.barrier, H, P, color }
     });
     oldHorseCache[raceId] = rows.map(r => ({number: r.J, odds: r.K})); saveCache();
-    let Q5 = `${e} + ${d}`;
+    let Q5 = e + " + " + d;
     let fication = (e+d)<=8.1?"X":(e+d)>=10&&(e+d)<=12.1&&e<=8.9?"A":(e+d)>=10&&(e+d)<=12.1&&e>=9?"B":(e+d)>=13&&e<=8.9?"D":(e+d)>=13&&(e+d)<=14.1&&e>=9?"E":(e+d)>=15&&e>=9?"H":"";
     let yyy = "no"; if((e+d)>=10&&(e+d)<=12.1&&noHorses>=14) yyy="B14/BE YES "; if((e+d)>=13&&(e+d)<=20.1&&e===5) yyy="yes D5"; if((e+d)>=15&&e>=9) yyy="H YES";
     let yyyColor = yyy.includes("YES")?4:yyy.includes("no")?0:26;
     return {rows, Q5, Q4:fication, Q20:yyy, Q20Color:yyyColor};
 }
 
-// PROXY WITH V1 + V2 SUPPORT
 app.post("/api/tabtouch", async (req, res) => {
     try{
         const { url } = req.body;
         const parts = url.split("/");
         const date = parts[4]; const track = parts[5]; const race = parts[6];
-        
+
         let apiUrl = `https://www.tabtouch.com.au/api/racing/v1/race/${date}/${track}/${race}`;
         let r = await fetch(apiUrl, {headers:{"User-Agent":"Mozilla/5.0"}});
-        
+
         if(!r.ok){
             apiUrl = `https://www.tabtouch.com.au/api/racing/v2/race/${date}/${track}/${race}`;
             r = await fetch(apiUrl, {headers:{"User-Agent":"Mozilla/5.0"}});
@@ -65,16 +64,16 @@ app.post("/api/tabtouch", async (req, res) => {
         console.log("TABTOUCH RAW:", JSON.stringify(tabData).substring(0,500));
 
         let runners = [];
-        if(tabData.runners){ 
+        if(tabData.runners){
             runners = tabData.runners.map(r => ({number:r.number,name:r.name,odds:parseFloat(r.fixedOddsWin)||parseFloat(r.toteWin)||0,jockey:r.jockey?.name || r.jockey,barrier:r.barrier}));
-        } else if(tabData.race?.runners){ 
+        } else if(tabData.race?.runners){
             runners = tabData.race.runners.map(r => ({number:r.runnerNumber,name:r.runnerName,odds:parseFloat(r.odds?.fixedOddsWin)||0,jockey:r.jockeyName,barrier:r.barrier}));
         }
         if(runners.length === 0) throw new Error("No runners found");
         res.json({runners, bets:[]});
-    }catch(e){ 
+    }catch(e){
         console.log("PROXY ERROR:", e.message);
-        res.status(500).json({error:e.message}) 
+        res.status(500).json({error:e.message})
     }
 });
 
@@ -99,9 +98,9 @@ app.get("/page", (req, res) => {
     async function load(){document.getElementById("btn").disabled=true;document.getElementById("tbl").innerHTML="Loading...";
     try{let r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:RACE_URL})});let d=await r.json();
     if(!d.ok) throw new Error(d.error);
-    document.getElementById("head").innerHTML=\`<b>Q5:</b>\${d.Q5} <b>Q4:</b>\${d.Q4} <b>Q20:</b><span style="background:\${getC(d.Q20Color)};padding:2px">\${d.Q20}</span>\`;
+    document.getElementById("head").innerHTML='<b>Q5:</b>'+d.Q5+' <b>Q4:</b>'+d.Q4+' <b>Q20:</b><span style="background:'+getC(d.Q20Color)+';padding:2px">'+d.Q20+'</span>';
     let h="<table><tr><th class=colA>A</th><th>D</th><th>J</th><th>K</th><th>H</th><th>N</th><th>P%</th></tr>";
-    d.rows.forEach((x)=>{let bg=getC(x.color);h+=`<tr style="background:${bg}"><td class=colA>${x.A}</td><td class=colD>${x.D}</td><td>${x.J}</td><td>${x.K}</td><td>${x.H}</td><td>${x.N}</td><td>${x.P}%</td></tr>`});
+    d.rows.forEach((x)=>{let bg=getC(x.color);h+='<tr style="background:'+bg+'"><td class=colA>'+x.A+'</td><td class=colD>'+x.D+'</td><td>'+x.J+'</td><td>'+x.K+'</td><td>'+x.H+'</td><td>'+x.N+'</td><td>'+x.P+'%</td></tr>'});
     document.getElementById("tbl").innerHTML=h+"</table>";}catch(e){document.getElementById("tbl").innerHTML="<div style=color:red>"+e+"</div>"}
     document.getElementById("btn").disabled=false;}
     function getC(i){return {4:"#0f0",35:"#92D050",38:"#FFC000",39:"#f00",46:"#FF9966",26:"#FFD700",0:"#fff"}[i]||"#fff"}
